@@ -126,7 +126,7 @@ def start_server(port=DEFAULT_METRICS_PORT, address="", registry=REGISTRY):
         httpd.serve_forever()
 
 
-if __name__ == "__main__":
+def main():
     import os
 
     port = os.environ.get("METRICS_PORT", DEFAULT_METRICS_PORT)
@@ -135,3 +135,7 @@ if __name__ == "__main__":
     collector = PrusaCollector(printer_hostname)
     REGISTRY.register(collector)
     start_server(port, registry=REGISTRY)
+
+
+if __name__ == "__main__":
+    main()
