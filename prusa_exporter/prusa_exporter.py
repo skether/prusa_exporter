@@ -21,12 +21,12 @@ During printing:
     'pos_z_mm': 6.48,               // Implemented as prusa_position_meter{axis="z"}
     'printing_speed': 100,          // Implemented as prusa_print_speed_percent
     'flow_factor': 100,             // Implemented as prusa_flow_factor_percent
-    'progress': 87,                 // Implemented as prusa_print_job_progress_percent
-    'print_dur': '  1d  0h 54m',    // Implemented as prusa_print_job_elapsed_time_seconds
-    'time_est': '13380',            // Implemented as prusa_print_job_remaining_time_seconds
-    'time_zone': '1',
+    'progress': 87,                 // Implemented as prusa_print_job_progress_percent{project="X"}
+    'print_dur': '  1d  0h 54m',    // Implemented as prusa_print_job_elapsed_time_seconds{project="X"}
+    'time_est': '13380',            // Implemented as prusa_print_job_remaining_time_seconds{project="X"}
+    'time_zone': '1',               // Not useful
     'project_name': 'Nasa_Chainmail_15x15-HandCrafted-lowres_0.25n_0.15mm_PLA_MINI_1d5h3m.gcode'
-                                    // Implemented as prusa_print_job_info
+                                    // Included as a label for job metrics
 }
 
 Idle:
@@ -74,24 +74,30 @@ class PrusaCollector(object):
         material_metric.add_metric([], {"material": telemetry.get("material")})
         yield material_metric
 
+        project = telemetry.get("project_name", None)
+
         time_str = telemetry.get("print_dur")
         time = None
         if time_str:
-            match = re.match(r"^\s*((\d+)d)?\s*((\d+)h)?\s*((\d+)m)?\s*((\d+)s)?\s*$", telemetry.get("print_dur", ""))
+            match = re.match(r"^\s*((\d+)d)?\s*((\d+)h)?\s*((\d+)m)?\s*((\d+)s)?\s*$", time_str)
             time = sum((int(match.group(2) or 0) * 24 * 60 * 60, int(match.group(4) or 0) * 60 * 60, int(match.group(6) or 0) * 60, int(match.group(8) or 0)))
-        yield GaugeMetricFamily(f"{self.prefix}_print_job_elapsed_time", "Time elapsed since the start of the print", value=time, unit="seconds")
+        elapsed_time_metric = GaugeMetricFamily(f"{self.prefix}_print_job_elapsed_time", "Time elapsed since the start of the print", labels=["project"], unit="seconds")
+        if project:
+            elapsed_time_metric.add_metric([project], time)
+        yield elapsed_time_metric
 
-        yield GaugeMetricFamily(f"{self.prefix}_print_job_remaining_time", "Time remaining of the print job", value=telemetry.get("time_est"), unit="seconds")
+        remaining_time_metric = GaugeMetricFamily(f"{self.prefix}_print_job_remaining_time", "Time remaining of the print job", labels=["project"], unit="seconds")
+        if project:
+            remaining_time_metric.add_metric([project], telemetry.get("time_est"))
+        yield remaining_time_metric
 
         progress = telemetry.get("progress")
         if progress:
             progress /= 100
-        yield GaugeMetricFamily(f"{self.prefix}_print_job_progress", "The percent progress of the print job", value=progress, unit="percent")
-
-        if telemetry.get("project_name"):
-            print_info_metric = InfoMetricFamily(f"{self.prefix}_print_job", "Info about the current print job")
-            print_info_metric.add_metric([], {"project": telemetry.get("project_name")})
-            yield print_info_metric
+        progress_metric = GaugeMetricFamily(f"{self.prefix}_print_job_progress", "The percent progress of the print job", labels=["project"], unit="percent")
+        if project:
+            progress_metric.add_metric([project], progress)
+        yield progress_metric
 
     def describe(self):
         yield GaugeMetricFamily(f"{self.prefix}_printer_available", "Returns of the printer is available on the network")
@@ -100,10 +106,9 @@ class PrusaCollector(object):
         yield GaugeMetricFamily(f"{self.prefix}_flow_factor", "Flow factor", unit="percent")
         yield GaugeMetricFamily(f"{self.prefix}_position", "Position of the axis", labels=["axis"], unit="millimeters")
         yield InfoMetricFamily(f"{self.prefix}_material", "Info about the material loaded into the printer")
-        yield GaugeMetricFamily(f"{self.prefix}_print_job_elapsed_time", "Time elapsed since the start of the print", unit="seconds")
-        yield GaugeMetricFamily(f"{self.prefix}_print_job_remaining_time", "Time remaining of the print job", unit="seconds")
-        yield GaugeMetricFamily(f"{self.prefix}_print_job_progress", "The percent progress of the print job", unit="percent")
-        yield InfoMetricFamily(f"{self.prefix}_print_job", "Info about the current print job")
+        yield GaugeMetricFamily(f"{self.prefix}_print_job_elapsed_time", "Time elapsed since the start of the print", labels=["project"], unit="seconds")
+        yield GaugeMetricFamily(f"{self.prefix}_print_job_remaining_time", "Time remaining of the print job", labels=["project"], unit="seconds")
+        yield GaugeMetricFamily(f"{self.prefix}_print_job_progress", "The percent progress of the print job", labels=["project"], unit="percent")
 
     def retrieve_telemetry(self):
         try:
