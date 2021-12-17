@@ -135,8 +135,18 @@ def start_server(port=DEFAULT_METRICS_PORT, address="", registry=REGISTRY):
         httpd.serve_forever()
 
 
+def shutdown(signal, _):
+    import sys
+    print(f"Signal ({signal}) received! Shutting down...")
+    sys.exit(0)
+
+
 def main():
     import os
+    import signal
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
 
     port = os.environ.get("METRICS_PORT", DEFAULT_METRICS_PORT)
     printer_hostname = os.environ.get("PRINTER_HOSTNAME", None)
