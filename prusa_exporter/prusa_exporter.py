@@ -114,9 +114,13 @@ class PrusaCollector(object):
         try:
             r = requests.get(f"http://{self.hostname}/api/telemetry", timeout=5)
             if r.status_code == requests.codes.ok:
-                return r.json()
+                telemetry = r.json()
+                print(f"Telemetry received: {telemetry}")
+                return telemetry
+            print(f"Telemetry error: {r.status_code}")
             return None
         except requests.Timeout:
+            print("Telemetry request timeout!")
             return None
         except Exception as e:
             print("An exception occured while retrieving telemetry! ")
