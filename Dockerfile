@@ -1,4 +1,4 @@
-FROM python:3.9-slim AS build
+FROM python:3.10-slim AS build
 
 RUN pip3 install poetry
 WORKDIR /src
@@ -7,7 +7,7 @@ RUN poetry install
 RUN poetry build -f wheel
 
 
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /pkg
 COPY --from=build /src/dist/prusa_exporter*.whl /pkg/

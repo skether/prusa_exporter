@@ -70,9 +70,11 @@ class PrusaCollector(object):
         position_metric.add_metric(["z"], telemetry.get("pos_z_mm"))
         yield position_metric
 
-        material_metric = InfoMetricFamily(f"{self.prefix}_material", "Info about the material loaded into the printer")
-        material_metric.add_metric([], {"material": telemetry.get("material")})
-        yield material_metric
+        material = (telemetry.get("material", "")).strip()
+        if material and material != "---":
+            material_metric = InfoMetricFamily(f"{self.prefix}_material", "Info about the material loaded into the printer")
+            material_metric.add_metric([], {"material": telemetry.get("material")})
+            yield material_metric
 
         project = telemetry.get("project_name", None)
 
